@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .report-box {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    .exceeded {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Expense Tracker</h1>
+
+  <h2>Add Expense</h2>
+  <form id="expenseForm">
+    <label>Category: <input type="text" name="category" required></label>
+    <label>Amount: <input type="number" name="amount" required></label>
+    <label>Description: <input type="text" name="description"></label>
+    <button type="submit">Add Expense</button>
+  </form>
+
+  <h2>Set Budget</h2>
+  <form id="budgetForm">
+    <label>Month: <input type="month" name="month" required></label>
+    <label>Category: <input type="text" name="category" required></label>
+    <label>Limit: <input type="number" name="limit" required></label>
+    <button type="submit">Set Budget</button>
+  </form>
+
+  <h2>View Report</h2>
+  <label>Select Month: <input type="month" id="reportMonth"></label>
+  <button onclick="getReport()">Get Report</button>
+  <div id="reportOutput"></div>
+
+  <script>
+    document.getElementById('expenseForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const res = await fetch('/expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      alert((await res.json()).message);
+      e.target.reset();
+    };
+
+    document.getElementById('budgetForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const res = await fetch('/budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      alert((await res.json()).message);
+      e.target.reset();
+    };
+
+    async function getReport() {
+      const month = document.getElementById('reportMonth').value;
+      if (!month) return alert("Please select a month to view the report.");
+      const res = await fetch(`/report/${month}`);
+      const data = await res.json();
+      const output = document.getElementById('reportOutput');
+      output.innerHTML = '';
+
+      let exceededAny = false;
+
+      for (let category in data) {
+        const info = data[category];
+        const div = document.createElement('div');
+        div.classList.add('report-box');
+        div.innerHTML = `
+          <strong>${category.toUpperCase()}</strong><br>
+          Budget: ₹${info.budget}<br>
+          Spent: ₹${info.spent}<br>
+          ${info.exceeded ? '<span class="exceeded">⚠️ Budget Exceeded!</span>' : ''}
+        `;
+        output.appendChild(div);
+      }
+
+      if (exceededAny) {
+        alert('⚠️ Warning: One or more categories have exceeded their budget!');
+      }
+    }
+  </script>
+</body>
+</html>
